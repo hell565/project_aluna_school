@@ -1,14 +1,13 @@
 # project_aluna_school
 
 
-Gg, [06.02.2026 1:34]
-# README.md: Платформа для Уроков в Школе
+ # README.md: Платформа для Уроков в Школе
 
 ## Обзор
 
 Это полноценное веб-приложение для учителей, позволяющее создавать интерактивные уроки. Сайт позволяет учителям регистрироваться, входить в систему и генерировать уроки с 8 слайдами на основе темы. Интегрируется ИИ для генерации текста (через Aitunnel.ru), изображений (Unsplash/Pexels) и озвучки текста (ElevenLabs). Уроки сохраняются и просматриваются с автоматическим переключением слайдов, синхронизированным с аудио.
 
-Ключевые возможности:
+**Ключевые возможности:**
 - Регистрация и аутентификация пользователей.
 - Мастер создания урока: Тема → Текст от ИИ → Изображения → Аудио → Сохранение и просмотр.
 - Хостинг на бесплатном тарифе InfinityFree (PHP 8.2/8.3, MySQL, cURL включён; ограничения: без Composer, без ffmpeg, ~45 сек на выполнение скрипта, 5 ГБ диск, 10 МБ размер файла).
@@ -16,7 +15,7 @@ Gg, [06.02.2026 1:34]
 - Backend: Чистый PHP + PDO.
 - Хранение: MySQL для метаданных; папки на сервере для аудио (lessons/temp и published).
 
-Предположения:
+**Предположения:**
 - Ключи API: Aitunnel.ru (совместим с OpenAI), ElevenLabs, Unsplash/Pexels (опциональные ключи).
 - Безопасность: Базовая (хэшированные пароли, проверка сессий); добавить CSRF позже.
 - Дизайн: Простой, responsive; фокус на функциональности.
@@ -25,7 +24,7 @@ Gg, [06.02.2026 1:34]
 
 Ниже приведено дерево файлов проекта. Используйте эту структуру строго при разработке.
 
-`markdown
+```markdown
 school-lessons-platform/                  # ← Корневая папка сайта (public_html на InfinityFree)
 ├── index.php                             # Главная: Форма входа/регистрации
 ├── config.php                            # Конфиг БД, ключи API (не коммитить в git!)
@@ -61,8 +60,6 @@ school-lessons-platform/                  # ← Корневая папка са
 ├── lessons/                              # Хранение данных уроков (защитить .htaccess)
 │   ├── temp/                             # Черновики во время создания (очищать периодически)
 │   │   └── {teacher_id}_{unix_ts}/       # Пример: 7_1738765432/
-
-Gg, [06.02.2026 1:34]
 │   │       ├── slide-1.mp3
 │   │       ├── slide-2.mp3
 │   │       └── ... (до slide-8.mp3)
@@ -82,6 +79,7 @@ Gg, [06.02.2026 1:34]
 │   └── login.php                         # Форма входа
 
 └── logout.php                            # Обработчик выхода
+```
 
 ### Примечания к папкам
 - **assets/**: Доступны публично; держите файлы маленькими.
@@ -94,7 +92,7 @@ Gg, [06.02.2026 1:34]
 
 Используйте MySQL (создайте через phpMyAdmin на InfinityFree).
 
-sql
+```sql
 CREATE DATABASE school_lessons;
 
 USE school_lessons;
@@ -130,6 +128,7 @@ CREATE TABLE slides (
     duration_sec FLOAT DEFAULT NULL,  -- Опционально для лучшей синхронизации
     FOREIGN KEY (lesson_id) REFERENCES lessons(id)
 );
+```
 
 ## Установка на InfinityFree
 
@@ -142,7 +141,7 @@ CREATE TABLE slides (
 7. Тестируйте: Посетите index.php → зарегистрируйтесь → dashboard.
 
 **Пример config.php:**
-php
+```php
 <?php
 define('DB_HOST', 'sqlXXX.infinityfree.com');
 define('DB_NAME', 'if0_XXXX_school_lessons');
@@ -153,42 +152,44 @@ define('AITUNNEL_API_KEY', 'sk-aitunnel-yourkey');
 define('ELEVENLABS_API_KEY', 'your-elevenlabs-key');
 define('UNSPLASH_API_KEY', 'optional-unsplash-key');  // Если используете полный API
 
-// ПодПримечание:db.php
-`
+// Подключение PDO в db.php
+```
 **Примечание:** Игнорируйте `config.php` в git.
 
 ## Эндпоинты API
 
-Все в папке `/api/`. Используйте POST, ответы в JSON. Требуйте аgenerate-text.php
+Все в папке `/api/`. Используйте POST, ответы в JSON. Требуйте авторизацию (сессия).
+
 - **generate-text.php**
   - Метод: POST
   - Параметры: `theme` (строка)
   - Ответ: JSON {status: 'ok', slides: [{slide:1, title:'', text:''}, ...]}
-  - Использует cURL к Aitunnel.ru (/vsuggest-images.php- **suggest-images.php**
+  - Использует cURL к Aitunnel.ru (/v1/chat/completions).
+
+- **suggest-images.php**
   - Метод: POST
   - Параметры: `keyword` (строка, на слайд)
   - Ответ: JSON {status: 'ok', images: [{url: 'https://unsplash.com/...', title: ''}, ...]}
   - Получает из Unsplash (random или search).
 
-Gg, [06.02.2026 1:34]
-- generate-audio.php
+- **generate-audio.php**
   - Метод: POST
-  - Параметры: text (строка), slide_num (int), lesson_id (temp строка)
+  - Параметры: `text` (строка), `slide_num` (int), `lesson_id` (temp строка)
   - Ответ: JSON {status: 'ok', audio_path: 'lessons/temp/.../slide-X.mp3'}
   - Использует cURL к ElevenLabs (/v1/text-to-speech/{voice}).
 
-- save-draft.php
+- **save-draft.php**
   - Метод: POST
-  - Параметры: slides (JSON-массив)
+  - Параметры: `slides` (JSON-массив)
   - Ответ: JSON {status: 'ok', draft_id: 'temp_folder_name'}
 
-- finalize-lesson.php
+- **finalize-lesson.php**
   - Метод: POST
-  - Параметры: draft_id (строка), title (строка)
+  - Параметры: `draft_id` (строка), `title` (строка)
   - Ответ: JSON {status: 'ok', lesson_id: 123, view_url: '/view.php?id=123&key=abc'}
   - Перемещает файлы в published, обновляет БД.
 
-Обработка ошибок: Все возвращают {status: 'error', message: '...'}
+**Обработка ошибок:** Все возвращают {status: 'error', message: '...'}
 
 ## Этапы Разработки
 
@@ -196,7 +197,7 @@ Gg, [06.02.2026 1:34]
 
 ### Этап 1: Базовая Структура, Регистрация и Личный Кабинет (MVP Аутентификации)
 
-Цель: Настроить скелет с аутентификацией пользователей.
+**Цель:** Настроить скелет с аутентификацией пользователей.
 
 - Создайте папки/файлы по дереву.
 - Реализуйте register.php, login.php, logout.php.
@@ -205,11 +206,11 @@ Gg, [06.02.2026 1:34]
 - SQL: Создайте таблицу users.
 - JS: auth.js для отправки форм (AJAX опционально).
 
-Изменённые файлы: index.php, config.php, includes/*, pages/register.php, pages/login.php, dashboard.php, .htaccess.
+**Изменённые файлы:** index.php, config.php, includes/*, pages/register.php, pages/login.php, dashboard.php, .htaccess.
 
 ### Этап 2: Форма Урока + Генерация Текста через Aitunnel.ru
 
-Цель: Ввод темы → Генерация текста 8 слайдов.
+**Цель:** Ввод темы → Генерация текста 8 слайдов.
 
 - create-lesson.php: Форма для темы.
 - api/generate-text.php: cURL к Aitunnel.ru.
@@ -218,11 +219,11 @@ Gg, [06.02.2026 1:34]
 - Отобразите редактируемые textarea.
 - Кнопка "Далее → Изображения".
 
-Изменённые файлы: pages/create-lesson.php, api/generate-text.php, assets/js/create-lesson.js.
+**Изменённые файлы:** pages/create-lesson.php, api/generate-text.php, assets/js/create-lesson.js.
 
 ### Этап 3: Добавление Изображений к Слайдам (Unsplash/Pexels, только URL)
 
-Цель: Предложить/выбрать изображения на слайд.
+**Цель:** Предложить/выбрать изображения на слайд.
 
 - В create-lesson.php (или multi-step JS): 8 блоков с вводом ключевого слова.
 - api/suggest-images.php: Получить URL из Unsplash.
@@ -230,11 +231,11 @@ Gg, [06.02.2026 1:34]
 - Предпросмотр <img src={url}>.
 - Кнопка "Далее → Аудио".
 
-Изменённые файлы: api/suggest-images.php, обновите create-lesson.js.
+**Изменённые файлы:** api/suggest-images.php, обновите create-lesson.js.
 
 ### Этап 4: Генерация Аудио через ElevenLabs + Базовая Синхронизация (8 Отдельных Файлов)
 
-Цель: TTS на слайд, сохранение MP3.
+**Цель:** TTS на слайд, сохранение MP3.
 
 - Кнопка "Генерировать аудио": Цикл 8 вызовов api/generate-audio.php.
 - Каждый: cURL к ElevenLabs, сохранение в lessons/temp/{draft_id}/slide-X.mp3.
@@ -242,12 +243,12 @@ Gg, [06.02.2026 1:34]
 - JS: Обработка последовательной генерации (чтобы избежать таймаута).
 - Кнопка "Сохранить урок".
 
-Изменённые файлы: api/generate-audio.php, api/save-draft.php, обновите create-lesson.js.
-Примечание: По одному слайду, если таймауты.
+**Изменённые файлы:** api/generate-audio.php, api/save-draft.php, обновите create-lesson.js.
+**Примечание:** По одному слайду, если таймауты.
 
 ### Этап 5: Сохранение Урока, Страница Просмотра + Авто-Переключение Слайдов
 
-Цель: Финализировать и просматривать с синхронизацией.
+**Цель:** Финализировать и просматривать с синхронизацией.
 
 - api/finalize-lesson.php: Вставка в БД, перемещение файлов в published/{id}.
 - Сгенерируйте view_key (md5 random).
@@ -255,7 +256,7 @@ Gg, [06.02.2026 1:34]
 - JS: Массив Audio-объектов; onended → следующее аудио + показ следующего слайда.
 - Управление: Play/pause, prev/next.
 
-Изменённые файлы: api/finalize-lesson.php, pages/view.php, assets/js/view-lesson.js, SQL для таблиц lessons/slides.
+**Изменённые файлы:** api/finalize-lesson.php, pages/view.php, assets/js/view-lesson.js, SQL для таблиц lessons/slides.
 
 ## Тестирование и Отладка
 
@@ -275,3 +276,4 @@ Gg, [06.02.2026 1:34]
 Контакты по вопросам: [Ваш Email].
 
 Последнее обновление: 5 февраля 2026 года.
+ 
